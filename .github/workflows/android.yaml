@@ -3,57 +3,36 @@
 name: Android
 
 on:
-  pull_request:
-    branches:
-      - master
   push:
-    branches:
-      - master
-  
+  pull_request:
+
 jobs:
-
   build:
-    runs-on: macos-latest
-  
+    runs-on: ubuntu-latest
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Install Nix (for nix usage)
+        run: |
+          set -euo pipefail
+          curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
+          . "$HOME/.nix-profile/etc/profile.d/nix.sh"
+          nix --version
 
-    - name: Setup Java
-      uses: actions/setup-java@v3
-      with:
-        distribution: 'temurin'
-        java-version: '17'
+      - name: Checkout code
+        uses: actions/checkout@v6
 
-    - name: Setup FVM
-      id: fvm-config-action
-      uses: kuhnroyal/flutter-fvm-config-action@v2
+      - name: Collect Translation Files
+        run: |
+          set -euo pipefail
+          . "$HOME/.nix-profile/etc/profile.d/nix.sh"
+          nix --version
+          cd lib/l10n
+          nix --extra-experimental-features 'nix-command flakes' develop --command python3 collect_translations.py
+          cd ../..
 
-    - uses: subosito/flutter-action@v2
-      with:
-        flutter-version: ${{ steps.fvm-config-action.outputs.FLUTTER_VERSION }}
-        channel: ${{ steps.fvm-config-action.outputs.FLUTTER_CHANNEL }}
-        cache: false
-        cache-key: "flutter-:os:-:channel:-:version:-:arch:-:hash:"
-        cache-path: "${{ runner.tool_cache }}/flutter/:channel:-:version:-:arch:"
-        pub-cache-key: "flutter-pub:os:-:channel:-:version:-:arch:-:hash:"
-        pub-cache-path: "${{ runner.tool_cache }}/flutter/:channel:-:version:-:arch:"
-
-    - run: flutter --version
-
-    - name: Setup Gradle
-      uses: gradle/gradle-build-action@v2.4.2
-      with:
-        gradle-version: 8.7
-
-    - name: Collect Translation Files
-      run: |
-        cd lib/l10n
-        python3 collect_translations.py
-
-    - name: Build for Android
-      run: |
-        dart pub global activate fvm
-        fvm install
-        fvm flutter pub get
-        fvm flutter build apk --debug
+      - name: Build Debug APK
+        run: |
+          set -euo pipefail
+          . "$HOME/.nix-profile/etc/profile.d/nix.sh"
+          nix --version
+          nix --extra-experimental-features 'nix-command flakes' develop --command flutter build apk --debug
