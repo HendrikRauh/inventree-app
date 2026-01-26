@@ -11,28 +11,88 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Install Nix (for nix usage)
-        run: |
-          set -euo pipefail
-          curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
-          . "$HOME/.nix-profile/etc/profile.d/nix.sh"
-          nix --version
-
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Collect Translation Files
-        run: |
-          set -euo pipefail
-          . "$HOME/.nix-profile/etc/profile.d/nix.sh"
-          nix --version
-          cd lib/l10n
-          nix --extra-experimental-features 'nix-command flakes' develop --command python3 collect_translations.py
-          cd ../..
+      - name: Prepare Nix devshell
+        uses: ./.github/actions/nix-devshell
+        with:
+          prebuild: "true"
 
-      - name: Build Debug APK
-        run: |
-          set -euo pipefail
-          . "$HOME/.nix-profile/etc/profile.d/nix.sh"
-          nix --version
-          nix --extra-experimental-features 'nix-command flakes' develop --command flutter build apk --debug
+      - name: Collect Translation Files
+        uses: ./.github/actions/nix-devshell
+        with:
+          commands: |
+            cd lib/l10n
+            python3 collect_translations.py
+
+      # - name: Build Debug APK
+      #   uses: ./.github/actions/nix-devshell
+      #   with:
+      #     commands: |
+      #       flutter build apk --debug --target-platform android-arm64
+
+      # - name: Upload APK artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: app-debug-apk
+      #     path: build/app/outputs/flutter-apk/*.apk
+      #     # retention-days: 90
+
+      - name: Setup Release Keystore
+        uses: ./.github/actions/nix-devshell
+        with:
+          commands: |
+            # Write keystore into android/app and key.properties into android/
+            echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > android/app/inventree-release-key.jks
+            chmod 600 android/app/inventree-release-key.jks
+
+            # Write key.properties inside android/ (user preferred)
+            printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=%s\n" \
+              "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" "${GITHUB_WORKSPACE}/android/app/inventree-release-key.jks" \
+              > android/key.properties
+
+            # Also write a repo-root shim with an absolute path for Gradle to consume reliably
+            printf "storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=%s\n" \
+              "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" "${GITHUB_WORKSPACE}/android/app/inventree-release-key.jks" \
+              > key.properties
+
+            # Debug: show only non-secret info so logs aren't masked; confirm storeFile entries and JKS presence
+            echo "=== root storeFile ==="
+            grep '^storeFile=' key.properties || true
+            echo "=== android storeFile ==="
+            grep '^storeFile=' android/key.properties || true
+            echo "=== android/app listing ==="
+            ls -la android/app | sed -n '1,200p'
+            echo "=== key.properties files ==="
+            ls -la key.properties android/key.properties || true
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.INVENTREE_RELEASE_KEY_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.INVENTREE_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.INVENTREE_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.INVENTREE_KEY_ALIAS }}
+
+      - name: Debug Gradle signing
+        uses: ./.github/actions/nix-devshell
+        with:
+          commands: |
+            echo "=== root key.properties ==="
+            sed -n '1,200p' key.properties | sed -E 's/^(storePassword|keyPassword)=.*/\1=***/' || true
+            echo "=== android/key.properties ==="
+            sed -n '1,200p' android/key.properties | sed -E 's/^(storePassword|keyPassword)=.*/\1=***/' || true
+            echo "=== run gradle printSigning ==="
+            cd android
+            ./gradlew :app:printSigning --no-daemon --console=plain
+
+      - name: Build Release APK
+        uses: ./.github/actions/nix-devshell
+        with:
+          commands: |
+            flutter build apk --release --no-tree-shake-icons
+
+      - name: Upload Release APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: build/app/outputs/flutter-apk/*.apk
+          # retention-days: 90

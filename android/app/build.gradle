@@ -23,10 +23,36 @@ if (flutterVersionName == null) {
 }
 
 def keystoreProperties = new Properties()
+// Prefer root key.properties, but fall back to android/key.properties if present (CI may place it there)
 def keystorePropertiesFile = rootProject.file('key.properties')
+if (!keystorePropertiesFile.exists()) {
+    def alt = rootProject.file('android/key.properties')
+    if (alt.exists()) {
+        keystorePropertiesFile = alt
+    }
+}
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+} 
+
+// Temporary debug task: prints which keystore file Gradle sees and whether the storeFile exists (does NOT print secrets)
+task printSigning {
+    doLast {
+        println "keystorePropertiesFile = ${keystorePropertiesFile} (abs: ${keystorePropertiesFile?.absolutePath})"
+        println "keystoreProperties keys = " + keystoreProperties.keySet().toString()
+        def rawStore = keystoreProperties['storeFile'] ? keystoreProperties['storeFile'].toString().trim() : null
+        println "raw storeFile (trimmed) = " + (rawStore ?: 'null')
+        if (rawStore) {
+            def f = file(rawStore)
+            println "storeFile interpreted as file(...) = " + f.absolutePath + " exists = " + f.exists()
+            def f2 = new File(keystorePropertiesFile.parentFile, rawStore)
+            println "storeFile interpreted relative to keystorePropertiesFile = " + f2.absolutePath + " exists = " + f2.exists()
+            def f3 = new File(rootProject.projectDir, rawStore)
+            println "storeFile interpreted relative to rootProject = " + f3.absolutePath + " exists = " + f3.exists()
+        }
+    }
 }
+
 
 android {
     namespace "inventree.inventree_app"
@@ -68,7 +94,21 @@ android {
         release {
             keyAlias keystoreProperties['keyAlias']
             keyPassword keystoreProperties['keyPassword']
-            storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+            // Resolve storeFile robustly: trim, then prefer absolute path; if not found, try relative to keystore properties file
+            def rawStoreFile = keystoreProperties['storeFile'] ? keystoreProperties['storeFile'].toString().trim() : null
+            def resolvedStoreFile = null
+            if (rawStoreFile) {
+                def candidate = file(rawStoreFile)
+                if (!candidate.exists()) {
+                    // try relative to the keystore properties file directory
+                    def parentCandidate = new File(keystorePropertiesFile.parentFile, rawStoreFile)
+                    if (parentCandidate.exists()) {
+                        candidate = parentCandidate
+                    }
+                }
+                resolvedStoreFile = candidate.exists() ? candidate : null
+            }
+            storeFile resolvedStoreFile
             storePassword keystoreProperties['storePassword']
         }
     }

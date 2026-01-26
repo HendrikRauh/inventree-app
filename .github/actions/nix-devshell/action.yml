@@ -1,0 +1,50 @@
+name: "nix-devshell"
+description:
+  "Set up Nix, prebuild the devshell and run commands inside the devshell."
+inputs:
+  prebuild:
+    description:
+      "Whether to prebuild the devshell (nix develop --command true)."
+    required: false
+    default: "false"
+  commands:
+    description:
+      "Commands to run inside the devshell (executed with bash -lc)."
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install Nix (idempotent)
+      shell: bash
+      run: |
+        set -euo pipefail
+        if ! command -v nix >/dev/null 2>&1; then
+          curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
+        fi
+        # source the nix profile if present
+        if [ -f "$HOME/.nix-profile/etc/profile.d/nix.sh" ]; then
+          . "$HOME/.nix-profile/etc/profile.d/nix.sh"
+        fi
+        nix --version
+
+    - name: Prebuild devshell
+      if: ${{ inputs.prebuild == 'true' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ -f "$HOME/.nix-profile/etc/profile.d/nix.sh" ]; then
+          . "$HOME/.nix-profile/etc/profile.d/nix.sh"
+        fi
+        nix --extra-experimental-features 'nix-command flakes' develop --command true
+
+    - name: Run commands in devshell
+      if: ${{ inputs.commands != '' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ -f "$HOME/.nix-profile/etc/profile.d/nix.sh" ]; then
+          . "$HOME/.nix-profile/etc/profile.d/nix.sh"
+        fi
+        nix --extra-experimental-features 'nix-command flakes' develop --command bash -lc "${{ inputs.commands }}"
