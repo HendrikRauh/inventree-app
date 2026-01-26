@@ -6,8 +6,10 @@
 .DS_Store
 .atom/
 .buildlog/
+.direnv
 .history
 .svn/
+flake.nix.bak
 
 coverage/*
 
