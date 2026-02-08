@@ -1,4 +1,5 @@
 # Miscellaneous
+*.bak
 *.class
 *.log
 *.pyc
@@ -6,6 +7,7 @@
 .DS_Store
 .atom/
 .buildlog/
+.direnv/
 .history
 .svn/
 
