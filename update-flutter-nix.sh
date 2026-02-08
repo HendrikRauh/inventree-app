@@ -3,7 +3,7 @@
 # This script adjusts flake.nix to use the flutter version
 # pinned in .fvmrc. It fetches the appropriate commit hash.
 
-set -e
+set -euo pipefail
 
 for cmd in jq curl sed nix; do
   command -v $cmd >/dev/null 2>&1 || { echo "Error: $cmd is not installed!"; exit 1; }

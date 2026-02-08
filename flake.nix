@@ -66,6 +66,10 @@
               shift
               exec flutter "$@"
               ;;
+            dart)
+              shift
+              exec dart "$@"
+              ;;
             *)
               echo "fvm wrapper: command '$1' not implemented (using Nix-managed Flutter)" >&2
               exit 1

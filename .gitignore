@@ -1,4 +1,5 @@
 # Miscellaneous
+*.bak
 *.class
 *.log
 *.pyc
@@ -6,10 +7,9 @@
 .DS_Store
 .atom/
 .buildlog/
-.direnv
+.direnv/
 .history
 .svn/
-flake.nix.bak
 
 coverage/*
 
