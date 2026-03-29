@@ -275,7 +275,7 @@ class APIFormField {
       return;
     }
 
-    String url = api_url + "/" + value.toString() + "/";
+    String url = api_url + value.toString() + "/";
 
     final APIResponse response = await InvenTreeAPI().get(url, params: filters);
 
@@ -293,6 +293,8 @@ class APIFormField {
         return _constructString();
       case "boolean":
         return _constructBoolean();
+      case "boolean filter":
+        return _constructBooleanFilter();
       case "related field":
         return _constructRelatedField();
       case "integer":
@@ -874,25 +876,109 @@ class APIFormField {
 
   // Construct a boolean input element
   Widget _constructBoolean() {
-    bool? initial_value;
+    bool v = false;
 
-    if (value is bool || value == null) {
-      initial_value = value as bool?;
+    if (value is bool) {
+      v = value as bool;
     } else {
-      String vs = value.toString().toLowerCase();
-      initial_value = ["1", "true", "yes"].contains(vs);
+      v = false;
     }
 
-    return CheckBoxField(
-      label: label,
-      labelStyle: _labelStyle(),
-      helperText: helpText,
-      helperStyle: _helperStyle(),
-      initial: initial_value,
-      tristate: (getParameter("tristate") ?? false) as bool,
-      onSaved: (val) {
-        setFieldValue(val);
-      },
+    return ListTile(
+      title: Text(label),
+      subtitle: Text(helpText),
+      contentPadding: EdgeInsets.zero,
+      trailing: Switch(
+        value: v,
+        onChanged: (val) {
+          setFieldValue(val);
+        },
+      ),
+    );
+  }
+
+  // Construct a tri-state boolean filter element
+  Widget _constructBooleanFilter() {
+    String initial_value = "null";
+
+    bool allow_null = (getParameter("tristate") ?? false) as bool;
+
+    if (value is bool) {
+      initial_value = value.toString().toLowerCase();
+    } else if (value == null) {
+      if (allow_null) {
+        initial_value = "null";
+      } else {
+        initial_value = "false";
+      }
+    } else {
+      // Not a boolean value - may be a string
+      if (["1", "true", "yes"].contains(value.toString().toLowerCase())) {
+        initial_value = "true";
+      } else if ([
+        "0",
+        "false",
+        "no",
+      ].contains(value.toString().toLowerCase())) {
+        initial_value = "false";
+      } else if (allow_null) {
+        initial_value = "null";
+      } else {
+        initial_value = "false";
+      }
+    }
+
+    List<ButtonSegment<String>> buttons = [];
+
+    if ((getParameter("tristate") ?? false) as bool) {
+      buttons.add(
+        ButtonSegment<String>(
+          value: "null",
+          icon: Icon(TablerIcons.minus, color: COLOR_GRAY_LIGHT),
+        ),
+      );
+    }
+
+    buttons.add(
+      ButtonSegment<String>(
+        value: "false",
+        icon: Icon(TablerIcons.x, color: COLOR_DANGER),
+      ),
+    );
+
+    buttons.add(
+      ButtonSegment<String>(
+        value: "true",
+        icon: Icon(TablerIcons.check, color: COLOR_SUCCESS),
+      ),
+    );
+
+    return ListTile(
+      title: Text(label),
+      subtitle: Text(helpText),
+      contentPadding: EdgeInsets.zero,
+      trailing: SegmentedButton<String>(
+        segments: buttons,
+        selected: {initial_value},
+        showSelectedIcon: false,
+        multiSelectionEnabled: false,
+        style: SegmentedButton.styleFrom(
+          padding: EdgeInsets.all(0),
+          // minimumSize: MaterialStateProperty.all(Size(0, 0)),
+          // tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          visualDensity: VisualDensity.compact,
+        ),
+        onSelectionChanged: (Set<String> selection) {
+          String element = selection.first;
+          if (element == "null" && allow_null) {
+            setFieldValue(null);
+          } else if (element == "true") {
+            setFieldValue(true);
+          } else {
+            setFieldValue(false);
+          }
+        },
+      ),
     );
   }
 
@@ -1168,7 +1254,9 @@ class APIFormWidgetState extends State<APIFormWidget> {
   // Callback for when a field value is changed
   // Default implementation does nothing,
   // but custom form implementations may override this function
-  void onValueChanged(String field, dynamic value) {}
+  void onValueChanged(String field, dynamic value) {
+    setState(() {});
+  }
 
   Future<void> handleSuccess(
     Map<String, dynamic> submittedData,
@@ -1394,7 +1482,7 @@ class APIFormWidgetState extends State<APIFormWidget> {
 
       if (field.isSimple) {
         // Simple top-level field data
-        data[field.name] = field.data["value"];
+        data[field.name] = field.data["value"] ?? field.defaultValue;
       } else {
         // Not so simple... (WHY DID I MAKE THE API SO COMPLEX?)
         if (field.parent.isNotEmpty) {
