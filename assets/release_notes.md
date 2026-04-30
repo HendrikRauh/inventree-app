@@ -1,3 +1,14 @@
+## 0.24.1 - April 2026
+---
+
+- Fixes bug which prevented label printing
+
+## 0.24.0 - April 2026
+---
+
+- Adds support for build order management
+- Updated translations
+
 ## 0.23.0 - April 2026
 ---
 
