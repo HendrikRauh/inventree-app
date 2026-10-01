@@ -1,10 +1,9 @@
 import "package:flutter/material.dart";
 import "package:flutter_tabler_icons/flutter_tabler_icons.dart";
-
-import "package:inventree/app_colors.dart";
-import "package:inventree/user_profile.dart";
-import "package:inventree/l10.dart";
 import "package:inventree/api.dart";
+import "package:inventree/app_colors.dart";
+import "package:inventree/l10.dart";
+import "package:inventree/user_profile.dart";
 import "package:inventree/widget/dialogs.dart";
 import "package:inventree/widget/progress.dart";
 
@@ -57,18 +56,26 @@ class _InvenTreeLoginState extends State<InvenTreeLoginWidget> {
           widget.profile,
           username,
           password,
+          showDialog: false,
         );
       } else {
         // Check token validity
-        response = await InvenTreeAPI().checkToken(widget.profile, token);
+        response = await InvenTreeAPI().checkToken(widget.profile, token, showDialog: false);
       }
 
-      hideLoadingOverlay();
-
       if (response.successful()) {
-        // Return to the server selector screen
-        Navigator.of(context).pop();
+        // A token was issued - immediately connect using it, then return
+        // directly to the home screen (rather than leaving the user on the
+        // server-selector screen to navigate back manually)
+        await InvenTreeAPI().connectToServer(widget.profile);
+
+        hideLoadingOverlay();
+
+        if (context.mounted) {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
       } else {
+        hideLoadingOverlay();
         var data = response.asMap();
 
         String err;
@@ -116,7 +123,6 @@ class _InvenTreeLoginState extends State<InvenTreeLoginWidget> {
     return Scaffold(
       appBar: AppBar(
         title: Text(L10().login),
-        backgroundColor: COLOR_APP_BAR,
         actions: [
           IconButton(
             icon: Icon(TablerIcons.transition_right, color: COLOR_SUCCESS),

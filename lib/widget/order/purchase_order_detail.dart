@@ -22,7 +22,7 @@ import "package:inventree/widget/order/po_extra_line_list.dart";
 import "package:inventree/widget/order/po_line_list.dart";
 
 import "package:inventree/widget/attachment_widget.dart";
-import "package:inventree/widget/notes_widget.dart";
+import "package:inventree/widget/notes_list_widget.dart";
 import "package:inventree/widget/parameter_widget.dart";
 import "package:inventree/widget/progress.dart";
 import "package:inventree/widget/refreshable_state.dart";
@@ -95,7 +95,7 @@ class _PurchaseOrderDetailState
     if (showCameraShortcut && widget.order.canEdit) {
       actions.add(
         SpeedDialChild(
-          child: Icon(TablerIcons.camera, color: Colors.blue),
+          child: Icon(TablerIcons.camera, color: COLOR_ACTION),
           label: L10().takePicture,
           onTap: () async {
             _uploadImage(context);
@@ -108,7 +108,7 @@ class _PurchaseOrderDetailState
       if (widget.order.isPending) {
         actions.add(
           SpeedDialChild(
-            child: Icon(TablerIcons.circle_plus, color: Colors.green),
+            child: Icon(TablerIcons.circle_plus, color: COLOR_SUCCESS),
             label: L10().lineItemAdd,
             onTap: () async {
               _addLineItem(context);
@@ -118,7 +118,7 @@ class _PurchaseOrderDetailState
 
         actions.add(
           SpeedDialChild(
-            child: Icon(TablerIcons.send, color: Colors.blue),
+            child: Icon(TablerIcons.send, color: COLOR_ACTION),
             label: L10().issueOrder,
             onTap: () async {
               _issueOrder(context);
@@ -130,7 +130,7 @@ class _PurchaseOrderDetailState
       if (widget.order.isOpen && !widget.order.isPending) {
         actions.add(
           SpeedDialChild(
-            child: Icon(TablerIcons.circle_check, color: Colors.green),
+            child: Icon(TablerIcons.circle_check, color: COLOR_SUCCESS),
             label: L10().completeOrder,
             onTap: () async {
               _completeOrder(context);
@@ -142,7 +142,7 @@ class _PurchaseOrderDetailState
       if (widget.order.isOpen) {
         actions.add(
           SpeedDialChild(
-            child: Icon(TablerIcons.circle_x, color: Colors.red),
+            child: Icon(TablerIcons.circle_x, color: COLOR_DANGER),
             label: L10().cancelOrder,
             onTap: () async {
               _cancelOrder(context);
@@ -193,7 +193,7 @@ class _PurchaseOrderDetailState
       L10().issueOrder,
       L10().issueOrderConfirm,
       icon: TablerIcons.send,
-      color: Colors.blue,
+      color: COLOR_ACTION,
       acceptText: L10().issue,
       onAccept: () async {
         widget.order.issueOrder().then((dynamic) {
@@ -227,7 +227,7 @@ class _PurchaseOrderDetailState
       L10().cancelOrder,
       L10().cancelOrderConfirm,
       icon: TablerIcons.circle_x,
-      color: Colors.red,
+      color: COLOR_DANGER,
       acceptText: L10().cancel,
       onAccept: () async {
         widget.order.cancelOrder().then((dynamic) {
@@ -241,7 +241,7 @@ class _PurchaseOrderDetailState
   List<SpeedDialChild> barcodeButtons(BuildContext context) {
     List<SpeedDialChild> actions = [];
 
-    if (api.supportsBarcodePOReceiveEndpoint && widget.order.isPlaced) {
+    if (widget.order.isPlaced) {
       actions.add(
         SpeedDialChild(
           child: Icon(Icons.barcode_reader),
@@ -258,7 +258,7 @@ class _PurchaseOrderDetailState
       );
     }
 
-    if (widget.order.isPending && api.supportsBarcodePOAddLineEndpoint) {
+    if (widget.order.isPending) {
       actions.add(
         SpeedDialChild(
           child: Icon(TablerIcons.circle_plus, color: COLOR_SUCCESS),
@@ -288,12 +288,10 @@ class _PurchaseOrderDetailState
       INV_PO_SHOW_CAMERA,
       true,
     );
-    supportProjectCodes =
-        api.supportsProjectCodes &&
-        await api.getGlobalBooleanSetting(
-          "PROJECT_CODES_ENABLED",
-          backup: true,
-        );
+    supportProjectCodes = await api.getGlobalBooleanSetting(
+      "PROJECT_CODES_ENABLED",
+      backup: true,
+    );
 
     completedLines = 0;
 
@@ -367,11 +365,6 @@ class _PurchaseOrderDetailState
     // Cannot edit supplier field from here
     fields.remove("supplier");
 
-    // Contact model not supported by server
-    if (!api.supportsContactModel) {
-      fields.remove("contact");
-    }
-
     // ProjectCode model not supported by server
     if (!supportProjectCodes) {
       fields.remove("project_code");
@@ -410,6 +403,10 @@ class _PurchaseOrderDetailState
     InvenTreeCompany? supplier = widget.order.supplier;
 
     tiles.add(headerTile(context));
+
+    if (showPk) {
+      tiles.add(pkTile(widget.order.pk));
+    }
 
     if (supportProjectCodes && widget.order.hasProjectCode) {
       tiles.add(
@@ -570,17 +567,7 @@ class _PurchaseOrderDetailState
 
     // Notes tile
     tiles.add(
-      ListTile(
-        title: Text(L10().notes),
-        leading: Icon(TablerIcons.note, color: COLOR_ACTION),
-        trailing: LinkIcon(),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => NotesWidget(widget.order)),
-          );
-        },
-      ),
+      ShowNotesItem(context, widget.order, InvenTreePurchaseOrder.MODEL_TYPE),
     );
 
     ListTile? parameterTile = ShowParametersItem(

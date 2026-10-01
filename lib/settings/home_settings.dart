@@ -1,6 +1,5 @@
 import "package:flutter/material.dart";
 import "package:flutter_tabler_icons/flutter_tabler_icons.dart";
-import "package:inventree/app_colors.dart";
 
 import "package:inventree/l10.dart";
 import "package:inventree/preferences.dart";
@@ -24,6 +23,7 @@ class _HomeScreenSettingsState extends State<HomeScreenSettingsWidget> {
   bool homeShowSuppliers = true;
   bool homeShowManufacturers = true;
   bool homeShowCustomers = true;
+  bool homeShowTransfer = true;
 
   @override
   void initState() {
@@ -64,6 +64,9 @@ class _HomeScreenSettingsState extends State<HomeScreenSettingsWidget> {
     homeShowSuppliers =
         await InvenTreeSettingsManager().getValue(INV_HOME_SHOW_SUPPLIERS, true)
             as bool;
+    homeShowTransfer =
+        await InvenTreeSettingsManager().getValue(INV_HOME_SHOW_TRANSFER, true)
+            as bool;
 
     setState(() {});
   }
@@ -72,10 +75,7 @@ class _HomeScreenSettingsState extends State<HomeScreenSettingsWidget> {
   Widget build(BuildContext context) {
     return Scaffold(
       key: _settingsKey,
-      appBar: AppBar(
-        title: Text(L10().homeScreen),
-        backgroundColor: COLOR_APP_BAR,
-      ),
+      appBar: AppBar(title: Text(L10().homeScreen)),
       body: Container(
         child: ListView(
           children: [
@@ -154,6 +154,23 @@ class _HomeScreenSettingsState extends State<HomeScreenSettingsWidget> {
                   );
                   setState(() {
                     homeShowSuppliers = value;
+                  });
+                },
+              ),
+            ),
+            ListTile(
+              title: Text(L10().homeShowTransfer),
+              subtitle: Text(L10().homeShowTransferDescription),
+              leading: Icon(TablerIcons.transfer),
+              trailing: Switch(
+                value: homeShowTransfer,
+                onChanged: (bool value) {
+                  InvenTreeSettingsManager().setValue(
+                    INV_HOME_SHOW_TRANSFER,
+                    value,
+                  );
+                  setState(() {
+                    homeShowTransfer = value;
                   });
                 },
               ),

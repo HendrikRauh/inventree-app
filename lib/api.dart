@@ -2,32 +2,32 @@ import "dart:async";
 import "dart:convert";
 import "dart:io";
 
+import "package:cached_network_image/cached_network_image.dart";
 import "package:flutter/foundation.dart";
+import "package:flutter/material.dart";
+import "package:flutter_cache_manager/flutter_cache_manager.dart";
+import "package:flutter_tabler_icons/flutter_tabler_icons.dart";
 import "package:http/http.dart" as http;
 import "package:http/io_client.dart";
 import "package:intl/intl.dart";
-import "package:inventree/main.dart";
-import "package:inventree/widget/progress.dart";
-import "package:one_context/one_context.dart";
-import "package:open_filex/open_filex.dart";
-import "package:cached_network_image/cached_network_image.dart";
-import "package:flutter/material.dart";
-import "package:flutter_tabler_icons/flutter_tabler_icons.dart";
-import "package:flutter_cache_manager/flutter_cache_manager.dart";
-import "package:path_provider/path_provider.dart";
-
 import "package:inventree/api_form.dart";
 import "package:inventree/app_colors.dart";
-import "package:inventree/preferences.dart";
-import "package:inventree/l10.dart";
 import "package:inventree/helpers.dart";
 import "package:inventree/inventree/model.dart";
 import "package:inventree/inventree/notification.dart";
-import "package:inventree/inventree/status_codes.dart";
 import "package:inventree/inventree/sentry.dart";
+import "package:inventree/inventree/status_codes.dart";
+import "package:inventree/l10.dart";
+import "package:inventree/main.dart";
+import "package:inventree/preferences.dart";
+import "package:inventree/settings/login.dart";
 import "package:inventree/user_profile.dart";
 import "package:inventree/widget/dialogs.dart";
+import "package:inventree/widget/progress.dart";
 import "package:inventree/widget/snacks.dart";
+import "package:one_context/one_context.dart";
+import "package:open_filex/open_filex.dart";
+import "package:path_provider/path_provider.dart";
 
 /*
  * Class representing an API response from the server
@@ -193,14 +193,15 @@ class InvenTreeAPI {
   }
 
   // Minimum required API version for server
-  // 2023-03-04
-  static const _minApiVersion = 100;
+  // 2024-03-02 (release 0.14.0)
+  // Ref: https://github.com/inventree/InvenTree/releases/tag/0.14.0
+  static const _minApiVersion = 180;
 
   bool _strictHttps = false;
 
   // Endpoint for requesting an API token
-  static const _URL_TOKEN = "user/token/";
-  static const _URL_ROLES = "user/roles/";
+  static const _URL_TOKEN = "user/me/token/";
+  static const _URL_ROLES = "user/me/roles/";
   static const _URL_ME = "user/me/";
 
   // Accessors for various url endpoints
@@ -278,6 +279,9 @@ class InvenTreeAPI {
   Map<String, dynamic> userInfo = {};
 
   String get username => (userInfo["username"] ?? "") as String;
+  String get userEmail => (userInfo["email"] ?? "") as String;
+  String get userFirstName => (userInfo["first_name"] ?? "") as String;
+  String get userLastName => (userInfo["last_name"] ?? "") as String;
 
   int get userId => (userInfo["pk"] ?? -1) as int;
 
@@ -288,45 +292,9 @@ class InvenTreeAPI {
   String get serverVersion => (serverInfo["version"] ?? "") as String;
   int get apiVersion => (serverInfo["apiVersion"] ?? 1) as int;
 
-  // Consolidated search request API v102 or newer
-  bool get supportsConsolidatedSearch => apiVersion >= 102;
-
-  // ReturnOrder supports API v104 or newer
-  bool get supportsReturnOrders => apiVersion >= 104;
-
-  // "Contact" model exposed to API
-  bool get supportsContactModel => apiVersion >= 104;
-
-  // Status label endpoints API v105 or newer
-  bool get supportsStatusLabelEndpoints => apiVersion >= 105;
-
-  // Regex search API v106 or newer
-  bool get supportsRegexSearch => apiVersion >= 106;
-
-  // Order barcodes API v107 or newer
-  bool get supportsOrderBarcodes => apiVersion >= 107;
-
-  // Project codes require v109 or newer
-  bool get supportsProjectCodes => apiVersion >= 109;
-
-  // Does the server support extra fields on stock adjustment actions?
-  bool get supportsStockAdjustExtraFields => apiVersion >= 133;
-
-  // Does the server support receiving items against a PO using barcodes?
-  bool get supportsBarcodePOReceiveEndpoint => apiVersion >= 139;
-
-  // Does the server support adding line items to a PO using barcodes?
-  bool get supportsBarcodePOAddLineEndpoint => apiVersion >= 153;
-
-  // Does the server support allocating stock to sales order using barcodes?
-  bool get supportsBarcodeSOAllocateEndpoint => apiVersion >= 160;
-
-  // Does the server support the "modern" test results API
-  // Ref: https://github.com/inventree/InvenTree/pull/6430/
-  bool get supportsModernTestResults => apiVersion >= 169;
-
-  // Does the server support "null" top-level filtering for PartCategory and StockLocation endpoints?
-  bool get supportsNullTopLevelFiltering => apiVersion < 174;
+  /* API Version Checks
+   * These functions are used to determine if the server supports a particular feature
+   */
 
   // Does the server support "active" status on Company and SupplierPart API endpoints?
   bool get supportsCompanyActiveStatus => apiVersion >= 189;
@@ -339,6 +307,9 @@ class InvenTreeAPI {
   bool get supportsModernAttachments => apiVersion >= 207;
 
   bool get supportsUserPermissions => apiVersion >= 207;
+
+  // Ref: https://github.com/inventree/InvenTree/pull/7514
+  bool get supportsTopLevelFiltering => apiVersion >= 209;
 
   // Does the server support the "destination" field on the PurchaseOrder model?
   // Ref: https://github.com/inventree/InvenTree/pull/8403
@@ -357,6 +328,26 @@ class InvenTreeAPI {
   // Does the server support the "modern" (consolidated) parameter API?
   // Ref: https://github.com/inventree/InvenTree/pull/10699
   bool get supportsModernParameters => apiVersion >= 429;
+
+  // Does the support support the "primary" field on SupplierPart model?
+  bool get supportsSupplierPartPrimaryField => apiVersion >= 456;
+
+  // Does the server use the new "user/me/" endpoints?
+  // Ref: https://github.com/inventree/InvenTree/pull/11963
+  bool get supportsNewUserEndpoints => apiVersion >= 490;
+
+  // Does the server support TransferOrder model
+  // Ref: https://github.com/inventree/InvenTree/pull/11281
+  bool get supportsTransferOrders => apiVersion >= 492;
+
+  // Does the server support the "creation_date" field on the StockItem model?
+  // Ref: https://github.com/inventree/InvenTree/pull/12011
+  bool get supportsStockItemCreationDate => apiVersion >= 496;
+
+  // Does the server support the "multi notes" API?
+  // (Multiple HTML notes may be attached to a single model instance)
+  // Ref: https://github.com/inventree/InvenTree/pull/11971
+  bool get supportsMultiNotes => apiVersion >= 537;
 
   // Cached list of plugins (refreshed when we connect to the server)
   List<InvenTreePlugin> _plugins = [];
@@ -420,16 +411,34 @@ class InvenTreeAPI {
     }
 
     if (!await _checkAuth()) {
-      showServerError(
-        _URL_ME,
-        L10().serverNotConnected,
-        L10().serverAuthenticationError,
-      );
+      final UserProfile? expiredProfile = profile;
 
       // Invalidate the token
-      if (profile != null) {
-        profile!.token = "";
-        await UserProfileDBManager().updateProfile(profile!);
+      if (expiredProfile != null) {
+        expiredProfile.token = "";
+        await UserProfileDBManager().updateProfile(expiredProfile);
+      }
+
+      if (expiredProfile != null) {
+        showServerError(
+          _URL_ME,
+          L10().sessionExpired,
+          "${L10().sessionExpiredDetail}\n${expiredProfile.name}",
+        );
+
+        // Take the user straight to the login screen for this profile,
+        // rather than leaving them to work out why Home shows disconnected
+        OneContext().push(
+          MaterialPageRoute(
+            builder: (context) => InvenTreeLoginWidget(expiredProfile),
+          ),
+        );
+      } else {
+        showServerError(
+          _URL_ME,
+          L10().serverNotConnected,
+          L10().serverAuthenticationError,
+        );
       }
 
       return false;
@@ -469,10 +478,7 @@ class InvenTreeAPI {
       url = url + "/";
     }
 
-    // Cache the "strictHttps" setting, so we can use it later without async requirement
-    _strictHttps =
-        await InvenTreeSettingsManager().getValue(INV_STRICT_HTTPS, false)
-            as bool;
+    await _refreshHttpsPolicy();
 
     debug("Connecting to ${apiUrl}");
 
@@ -480,11 +486,7 @@ class InvenTreeAPI {
 
     if (!response.successful()) {
       debug("Server returned invalid response: ${response.statusCode}");
-      showStatusCodeError(
-        apiUrl,
-        response.statusCode,
-        details: response.data.toString(),
-      );
+      showStatusCodeError(apiUrl, response.statusCode, details: response.data);
       return false;
     }
 
@@ -543,7 +545,11 @@ class InvenTreeAPI {
     }
   }
 
-  Future<APIResponse> checkToken(UserProfile userProfile, String token) async {
+  Future<APIResponse> checkToken(
+    UserProfile userProfile,
+    String token, {
+    bool showDialog = true,
+  }) async {
     debug("Checking token @ ${_URL_ME}");
 
     userProfile.token = token;
@@ -552,16 +558,18 @@ class InvenTreeAPI {
     final response = await get(_URL_ME);
 
     if (!response.successful()) {
-      switch (response.statusCode) {
-        case 401:
-        case 403:
-          showServerError(
-            apiUrl,
-            L10().serverAuthenticationError,
-            L10().invalidToken,
-          );
-        default:
-          showStatusCodeError(apiUrl, response.statusCode);
+      if (showDialog) {
+        switch (response.statusCode) {
+          case 401:
+          case 403:
+            showServerError(
+              apiUrl,
+              L10().serverAuthenticationError,
+              L10().invalidToken,
+            );
+          default:
+            showStatusCodeError(apiUrl, response.statusCode);
+        }
       }
 
       debug("Request failed: STATUS ${response.statusCode}");
@@ -584,11 +592,14 @@ class InvenTreeAPI {
   Future<APIResponse> fetchToken(
     UserProfile userProfile,
     String username,
-    String password,
-  ) async {
+    String password, {
+    bool showDialog = true,
+  }) async {
     debug("Fetching user token from ${userProfile.server}");
 
     profile = userProfile;
+
+    await _refreshHttpsPolicy();
 
     // Form a name to request the token with
     String platform_name = "inventree-mobile-app";
@@ -623,25 +634,33 @@ class InvenTreeAPI {
     String authHeader =
         "Basic " + base64Encode(utf8.encode("${username}:${password}"));
 
+    String actualTokenUrl = supportsNewUserEndpoints
+        ? _URL_TOKEN
+        : "user/token/";
+
     // Perform request to get a token
     final response = await get(
-      _URL_TOKEN,
+      actualTokenUrl,
       params: {"name": platform_name},
       headers: {HttpHeaders.authorizationHeader: authHeader},
     );
 
+    final data = response.asMap();
+
     // Invalid response
     if (!response.successful()) {
-      switch (response.statusCode) {
-        case 401:
-        case 403:
-          showServerError(
-            apiUrl,
-            L10().serverAuthenticationError,
-            L10().invalidUsernamePassword,
-          );
-        default:
-          showStatusCodeError(apiUrl, response.statusCode);
+      if (showDialog) {
+        switch (response.statusCode) {
+          case 401:
+          case 403:
+            showServerError(
+              apiUrl,
+              L10().serverAuthenticationError,
+              L10().invalidUsernamePassword,
+            );
+          default:
+            showStatusCodeError(apiUrl, response.statusCode);
+        }
       }
 
       debug("Token request failed: STATUS ${response.statusCode}");
@@ -649,16 +668,17 @@ class InvenTreeAPI {
       if (response.data != null) {
         debug("Response data: ${response.data.toString()}");
       }
-    }
-
-    final data = response.asMap();
-
-    if (!data.containsKey("token")) {
-      showServerError(
-        apiUrl,
-        L10().tokenMissing,
-        L10().tokenMissingFromResponse,
-      );
+    } else if (!data.containsKey("token")) {
+      // The request was otherwise successful, but the response is missing
+      // the expected token field - a distinct (and much rarer) problem from
+      // an authentication failure, so only reachable when that did NOT occur
+      if (showDialog) {
+        showServerError(
+          apiUrl,
+          L10().tokenMissing,
+          L10().tokenMissingFromResponse,
+        );
+      }
     }
 
     // Save the token to the user profile
@@ -677,6 +697,8 @@ class InvenTreeAPI {
     _connected = false;
     _connecting = false;
     profile = null;
+
+    _resetHttpClient();
 
     // Clear received settings
     _globalSettings.clear();
@@ -744,8 +766,10 @@ class InvenTreeAPI {
     roles.clear();
 
     debug("API: Requesting user role data");
-
-    final response = await get(_URL_ROLES, expectedStatusCode: 200);
+    String actualRoleUrl = supportsNewUserEndpoints
+        ? _URL_ROLES
+        : "user/roles/";
+    final response = await get(actualRoleUrl, expectedStatusCode: 200);
 
     if (!response.successful()) {
       return false;
@@ -948,17 +972,11 @@ class InvenTreeAPI {
 
     HttpClientRequest? _request;
 
-    final bool strictHttps =
-        await InvenTreeSettingsManager().getValue(INV_STRICT_HTTPS, false)
-            as bool;
-
-    var client = createClient(url, strictHttps: strictHttps);
-
     showLoadingOverlay();
 
     // Attempt to open a connection to the server
     try {
-      _request = await client
+      _request = await httpClient
           .openUrl("GET", _uri)
           .timeout(Duration(seconds: 10));
 
@@ -968,7 +986,11 @@ class InvenTreeAPI {
       });
     } on SocketException catch (error) {
       debug("SocketException at ${url}: ${error.toString()}");
-      showServerError(url, L10().connectionRefused, error.toString());
+      showServerError(
+        url,
+        L10().connectionRefused,
+        L10().connectionRefusedDetail,
+      );
       return;
     } on TimeoutException {
       debug("TimeoutException at ${url}");
@@ -1003,8 +1025,12 @@ class InvenTreeAPI {
       } else {
         showStatusCodeError(url, response.statusCode);
       }
-    } on SocketException catch (error) {
-      showServerError(url, L10().connectionRefused, error.toString());
+    } on SocketException {
+      showServerError(
+        url,
+        L10().connectionRefused,
+        L10().connectionRefusedDetail,
+      );
     } on TimeoutException {
       showTimeoutError(url);
     } catch (error, stackTrace) {
@@ -1031,14 +1057,6 @@ class InvenTreeAPI {
     String method = "POST",
     Map<String, dynamic>? fields,
   }) async {
-    bool strictHttps = await InvenTreeSettingsManager().getBool(
-      INV_STRICT_HTTPS,
-      false,
-    );
-
-    // Create an IOClient wrapper for sending the MultipartRequest
-    final ioClient = IOClient(createClient(url, strictHttps: strictHttps));
-
     final uri = Uri.parse(makeApiUrl(url));
     final request = http.MultipartRequest(method, uri);
 
@@ -1068,9 +1086,9 @@ class InvenTreeAPI {
     String jsondata = "";
 
     try {
-      var streamedResponse = await ioClient
-          .send(request)
-          .timeout(Duration(seconds: 120));
+      var streamedResponse = await IOClient(
+        httpClient,
+      ).send(request).timeout(Duration(seconds: 120));
       final httpResponse = await http.Response.fromStream(streamedResponse);
 
       response.statusCode = httpResponse.statusCode;
@@ -1094,7 +1112,11 @@ class InvenTreeAPI {
         );
       }
     } on SocketException catch (error) {
-      showServerError(url, L10().connectionRefused, error.toString());
+      showServerError(
+        url,
+        L10().connectionRefused,
+        L10().connectionRefusedDetail,
+      );
       response.error = "SocketException";
       response.errorDetail = error.toString();
     } on FormatException {
@@ -1211,17 +1233,23 @@ class InvenTreeAPI {
     return response.isValid() && response.statusCode == 200;
   }
 
-  HttpClient createClient(String url, {bool strictHttps = false}) {
-    var client = HttpClient();
+  /*
+   * Create a new HttpClient, with the appropriate certificate handling
+   * Note that for some instances, we may wish to ignore certificate errors (e.g. self-signed certificates)
+   * In this case, we will allow the user to disable "strict HTTPS" mode
+   */
+  HttpClient _createClient() {
+    HttpClient client = HttpClient();
 
     client.badCertificateCallback =
         (X509Certificate cert, String host, int port) {
-          if (strictHttps) {
-            showServerError(
-              url,
-              L10().serverCertificateError,
-              L10().serverCertificateInvalid,
-            );
+          // The active profile may have been explicitly trusted by the user
+          // (in-flow, after a prior certificate failure) - honor that first
+          if (profile?.trustedCertificate ?? false) {
+            return true;
+          }
+
+          if (_strictHttps) {
             return false;
           }
 
@@ -1233,6 +1261,40 @@ class InvenTreeAPI {
     client.connectionTimeout = Duration(seconds: 30);
 
     return client;
+  }
+
+  /*
+   * Cached, reusable HttpClient instance.
+   * Avoids doing a slow TCP + TLS handshake on each request.
+   */
+  HttpClient? _httpClient;
+
+  HttpClient get httpClient {
+    return _httpClient ??= _createClient();
+  }
+
+  void _resetHttpClient() {
+    _httpClient?.close(force: true);
+    _httpClient = null;
+    _imageCacheManager = null;
+  }
+
+  /*
+   * Notify the API that the "strictHttps" setting has been changed.
+   */
+  void onStrictHttpsChanged(bool strictHttps) {
+    if (strictHttps != _strictHttps) {
+      _strictHttps = strictHttps;
+      _resetHttpClient();
+    }
+  }
+
+  Future<void> _refreshHttpsPolicy() async {
+    final bool strictHttps =
+        await InvenTreeSettingsManager().getValue(INV_STRICT_HTTPS, false)
+            as bool;
+
+    onStrictHttpsChanged(strictHttps);
   }
 
   /*
@@ -1278,17 +1340,11 @@ class InvenTreeAPI {
 
     HttpClientRequest? _request;
 
-    final bool strictHttps =
-        await InvenTreeSettingsManager().getValue(INV_STRICT_HTTPS, false)
-            as bool;
-
-    var client = createClient(url, strictHttps: strictHttps);
-
     // Attempt to open a connection to the server
+    // (retries once after a short delay on a transient network blip -
+    // nothing has been sent yet at this point, so a retry here is safe)
     try {
-      _request = await client
-          .openUrl(method, _uri)
-          .timeout(Duration(seconds: 10));
+      _request = await _openUrlWithRetry(method, _uri);
 
       // Default headers
       defaultHeaders().forEach((key, value) {
@@ -1303,7 +1359,11 @@ class InvenTreeAPI {
       return _request;
     } on SocketException catch (error) {
       debug("SocketException at ${url}: ${error.toString()}");
-      showServerError(url, L10().connectionRefused, error.toString());
+      showServerError(
+        url,
+        L10().connectionRefused,
+        L10().connectionRefusedDetail,
+      );
       return null;
     } on TimeoutException {
       debug("TimeoutException at ${url}");
@@ -1311,14 +1371,36 @@ class InvenTreeAPI {
       return null;
     } on OSError catch (error) {
       debug("OSError at ${url}: ${error.toString()}");
-      showServerError(url, L10().connectionRefused, error.toString());
+      showServerError(
+        url,
+        L10().connectionRefused,
+        L10().connectionRefusedDetail,
+      );
       return null;
     } on CertificateException catch (error) {
+      final HttpClientRequest? retried = await _retryAfterCertificateTrust(
+        url,
+        method,
+        _uri,
+        headers,
+      );
+      if (retried != null) {
+        return retried;
+      }
       debug("CertificateException at ${url}:");
       debug(error.toString());
       showServerError(url, L10().serverCertificateError, error.toString());
       return null;
     } on HandshakeException catch (error) {
+      final HttpClientRequest? retried = await _retryAfterCertificateTrust(
+        url,
+        method,
+        _uri,
+        headers,
+      );
+      if (retried != null) {
+        return retried;
+      }
       debug("HandshakeException at ${url}:");
       debug(error.toString());
       showServerError(url, L10().serverCertificateError, error.toString());
@@ -1335,6 +1417,107 @@ class InvenTreeAPI {
 
       return null;
     }
+  }
+
+  /*
+   * Open a connection to the given URL, retrying once after a short delay
+   * if the first attempt fails with a transient network error. Nothing has
+   * been sent to the server yet at this point, so a retry here is safe
+   * regardless of HTTP method (unlike retrying after a response has already
+   * started being read/sent).
+   */
+  Future<HttpClientRequest> _openUrlWithRetry(String method, Uri uri) async {
+    try {
+      return await httpClient
+          .openUrl(method, uri)
+          .timeout(Duration(seconds: 10));
+    } on SocketException {
+      await Future.delayed(const Duration(seconds: 2));
+      return await httpClient
+          .openUrl(method, uri)
+          .timeout(Duration(seconds: 10));
+    } on TimeoutException {
+      await Future.delayed(const Duration(seconds: 2));
+      return await httpClient
+          .openUrl(method, uri)
+          .timeout(Duration(seconds: 10));
+    }
+  }
+
+  /*
+   * A certificate error occurred while connecting to the active profile's
+   * server. If the user hasn't already trusted this profile's certificate,
+   * prompt them in-flow; if they accept, persist that decision against the
+   * profile and retry the connection once.
+   */
+  Future<HttpClientRequest?> _retryAfterCertificateTrust(
+    String url,
+    String method,
+    Uri uri,
+    Map<String, String> headers,
+  ) async {
+    final UserProfile? prf = profile;
+
+    if (prf == null || prf.trustedCertificate) {
+      // Nothing new to prompt for - surface the original error as-is
+      return null;
+    }
+
+    final bool trust = await _promptTrustCertificate(uri.host);
+
+    if (!trust) {
+      return null;
+    }
+
+    prf.trustedCertificate = true;
+    await UserProfileDBManager().updateProfile(prf);
+
+    try {
+      final HttpClientRequest request = await httpClient
+          .openUrl(method, uri)
+          .timeout(Duration(seconds: 10));
+
+      defaultHeaders().forEach((key, value) {
+        request.headers.set(key, value);
+      });
+
+      headers.forEach((key, value) {
+        request.headers.set(key, value);
+      });
+
+      return request;
+    } catch (error) {
+      debug(
+        "Retry after certificate trust failed at ${url}: ${error.toString()}",
+      );
+      return null;
+    }
+  }
+
+  /*
+   * Ask the user whether to trust an otherwise-invalid TLS certificate for
+   * the given host. Returns true if they accept.
+   */
+  Future<bool> _promptTrustCertificate(String host) async {
+    final Completer<bool> completer = Completer<bool>();
+
+    confirmationDialog(
+      L10().serverCertificateError,
+      "${L10().serverCertificateTrust}\n${host}",
+      icon: TablerIcons.shield_exclamation,
+      onAccept: () {
+        if (!completer.isCompleted) {
+          completer.complete(true);
+        }
+      },
+      onReject: () {
+        if (!completer.isCompleted) {
+          completer.complete(false);
+        }
+      },
+    );
+
+    return completer.future;
   }
 
   /*
@@ -1403,7 +1586,7 @@ class InvenTreeAPI {
           showStatusCodeError(
             url,
             _response.statusCode,
-            details: response.data.toString(),
+            details: response.data,
           );
         }
       }
@@ -1412,7 +1595,11 @@ class InvenTreeAPI {
       response.error = "HTTPException";
       response.errorDetail = error.toString();
     } on SocketException catch (error) {
-      showServerError(url, L10().connectionRefused, error.toString());
+      showServerError(
+        url,
+        L10().connectionRefused,
+        L10().connectionRefusedDetail,
+      );
       response.error = "SocketException";
       response.errorDetail = error.toString();
     } on CertificateException catch (error) {
@@ -1606,12 +1793,6 @@ class InvenTreeAPI {
 
     String url = makeUrl(imageUrl);
 
-    const key = "inventree_network_image";
-
-    CacheManager manager = CacheManager(
-      Config(key, fileService: InvenTreeFileService(strictHttps: _strictHttps)),
-    );
-
     return CachedNetworkImage(
       imageUrl: url,
       placeholder: (context, url) => CircularProgressIndicator(),
@@ -1627,7 +1808,21 @@ class InvenTreeAPI {
       httpHeaders: defaultHeaders(),
       height: height,
       width: width,
-      cacheManager: manager,
+      cacheManager: imageCacheManager,
+    );
+  }
+
+  CacheManager? _imageCacheManager;
+
+  CacheManager get imageCacheManager {
+    return _imageCacheManager ??= CacheManager(
+      Config(
+        "inventree_network_image",
+        fileService: InvenTreeFileService(
+          client: httpClient,
+          strictHttps: _strictHttps,
+        ),
+      ),
     );
   }
 
@@ -1783,11 +1978,15 @@ class InvenTreeAPI {
   InvenTreeStatusCode get SalesOrderStatus =>
       _get_status_class("order/so/status/");
 
+  InvenTreeStatusCode get BuildOrderStatus =>
+      _get_status_class("build/status/");
+
   void clearStatusCodeData() {
     StockHistoryStatus.data.clear();
     StockStatus.data.clear();
     PurchaseOrderStatus.data.clear();
     SalesOrderStatus.data.clear();
+    BuildOrderStatus.data.clear();
   }
 
   Future<void> fetchStatusCodeData({bool forceReload = true}) async {
@@ -1795,6 +1994,7 @@ class InvenTreeAPI {
     StockStatus.load(forceReload: forceReload);
     PurchaseOrderStatus.load(forceReload: forceReload);
     SalesOrderStatus.load(forceReload: forceReload);
+    BuildOrderStatus.load(forceReload: forceReload);
   }
 
   int notification_counter = 0;

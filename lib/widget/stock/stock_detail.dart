@@ -27,7 +27,7 @@ import "package:inventree/widget/refreshable_state.dart";
 import "package:inventree/widget/snacks.dart";
 import "package:inventree/widget/stock/stock_item_history.dart";
 import "package:inventree/widget/stock/stock_item_test_results.dart";
-import "package:inventree/widget/notes_widget.dart";
+import "package:inventree/widget/notes_list_widget.dart";
 
 class StockDetailWidget extends StatefulWidget {
   const StockDetailWidget(this.item, {Key? key}) : super(key: key);
@@ -94,7 +94,7 @@ class _StockItemDisplayState extends RefreshableState<StockDetailWidget> {
       if (!widget.item.isSerialized()) {
         actions.add(
           SpeedDialChild(
-            child: Icon(TablerIcons.circle_check, color: Colors.blue),
+            child: Icon(TablerIcons.circle_check, color: COLOR_ACTION),
             label: L10().countStock,
             onTap: _countStockDialog,
           ),
@@ -102,7 +102,7 @@ class _StockItemDisplayState extends RefreshableState<StockDetailWidget> {
 
         actions.add(
           SpeedDialChild(
-            child: Icon(TablerIcons.circle_minus, color: Colors.red),
+            child: Icon(TablerIcons.circle_minus, color: COLOR_DANGER),
             label: L10().removeStock,
             onTap: _removeStockDialog,
           ),
@@ -110,7 +110,7 @@ class _StockItemDisplayState extends RefreshableState<StockDetailWidget> {
 
         actions.add(
           SpeedDialChild(
-            child: Icon(TablerIcons.circle_plus, color: Colors.green),
+            child: Icon(TablerIcons.circle_plus, color: COLOR_SUCCESS),
             label: L10().addStock,
             onTap: _addStockDialog,
           ),
@@ -144,7 +144,7 @@ class _StockItemDisplayState extends RefreshableState<StockDetailWidget> {
     if (widget.item.canDelete) {
       actions.add(
         SpeedDialChild(
-          child: Icon(TablerIcons.trash, color: Colors.red),
+          child: Icon(TablerIcons.trash, color: COLOR_DANGER),
           label: L10().stockItemDelete,
           onTap: () {
             _deleteItem(context);
@@ -322,7 +322,7 @@ class _StockItemDisplayState extends RefreshableState<StockDetailWidget> {
       L10().stockItemDelete,
       L10().stockItemDeleteConfirm,
       icon: TablerIcons.trash,
-      color: Colors.red,
+      color: COLOR_DANGER,
       acceptText: L10().delete,
       onAccept: () async {
         final bool result = await widget.item.delete();
@@ -459,7 +459,7 @@ class _StockItemDisplayState extends RefreshableState<StockDetailWidget> {
    * Launches an API Form to transfer this stock item to a new location
    */
   Future<void> _transferStockDialog(BuildContext context) async {
-    Map<String, dynamic> fields = widget.item.transferFields();
+    Map<String, dynamic> fields = await widget.item.transferFields();
 
     launchApiForm(
       context,
@@ -523,6 +523,10 @@ class _StockItemDisplayState extends RefreshableState<StockDetailWidget> {
     if (loading) {
       tiles.add(progressIndicator());
       return tiles;
+    }
+
+    if (showPk) {
+      tiles.add(pkTile(widget.item.pk));
     }
 
     // Location information
@@ -732,6 +736,17 @@ class _StockItemDisplayState extends RefreshableState<StockDetailWidget> {
       );
     }
 
+    if (api.supportsStockItemCreationDate &&
+        widget.item.creationDateString.isNotEmpty) {
+      tiles.add(
+        ListTile(
+          title: Text(L10().creationDate),
+          trailing: LargeText(widget.item.creationDateString),
+          leading: Icon(TablerIcons.calendar_plus),
+        ),
+      );
+    }
+
     // Last update?
     if (widget.item.updatedDateString.isNotEmpty) {
       tiles.add(
@@ -825,17 +840,7 @@ class _StockItemDisplayState extends RefreshableState<StockDetailWidget> {
 
     // Notes field
     tiles.add(
-      ListTile(
-        title: Text(L10().notes),
-        leading: Icon(TablerIcons.note, color: COLOR_ACTION),
-        trailing: LinkIcon(),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => NotesWidget(widget.item)),
-          );
-        },
-      ),
+      ShowNotesItem(context, widget.item, InvenTreeStockItem.MODEL_TYPE),
     );
 
     ListTile? attachmentTile = ShowAttachmentsItem(

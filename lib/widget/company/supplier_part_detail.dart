@@ -146,6 +146,10 @@ class _SupplierPartDisplayState
       return tiles;
     }
 
+    if (showPk) {
+      tiles.add(pkTile(widget.supplierPart.pk));
+    }
+
     // Internal Part
     tiles.add(
       ListTile(
@@ -174,6 +178,21 @@ class _SupplierPartDisplayState
             style: TextStyle(color: COLOR_DANGER),
           ),
           leading: Icon(TablerIcons.exclamation_circle, color: COLOR_DANGER),
+        ),
+      );
+    }
+
+    if (api.supportsSupplierPartPrimaryField) {
+      tiles.add(
+        ListTile(
+          title: Text(L10().primary),
+          leading: Icon(TablerIcons.star, color: COLOR_ACTION),
+          trailing: Text(
+            widget.supplierPart.primary ? L10().yes : L10().no,
+            style: widget.supplierPart.primary
+                ? TextStyle(color: COLOR_SUCCESS)
+                : null,
+          ),
         ),
       );
     }

@@ -60,7 +60,7 @@ class _BuildItemDetailWidgetState
     // Unallocate button
     buttons.add(
       SpeedDialChild(
-        child: const Icon(TablerIcons.minus, color: Colors.red),
+        child: Icon(TablerIcons.minus, color: COLOR_DANGER),
         label: L10().unallocate,
         onTap: () async {
           _unallocateStock(context);
@@ -99,7 +99,7 @@ class _BuildItemDetailWidgetState
       L10().unallocateStock,
       L10().unallocateStockConfirm,
       icon: TablerIcons.minus,
-      color: Colors.red,
+      color: COLOR_DANGER,
       acceptText: L10().unallocate,
       onAccept: () async {
         widget.item.delete().then((result) {
@@ -124,6 +124,10 @@ class _BuildItemDetailWidgetState
   @override
   List<Widget> getTiles(BuildContext context) {
     List<Widget> tiles = [];
+
+    if (showPk) {
+      tiles.add(pkTile(widget.item.pk));
+    }
 
     // Stock item information
     if (widget.item.stockItem != null) {

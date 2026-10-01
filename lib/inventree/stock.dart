@@ -34,7 +34,6 @@ class InvenTreeStockItemTestResult extends InvenTreeModel {
   Map<String, Map<String, dynamic>> formFields() {
     Map<String, Map<String, dynamic>> fields = {
       "stock_item": {"hidden": true},
-      "test": {},
       "template": {
         "filters": {"enabled": "true"},
       },
@@ -43,12 +42,6 @@ class InvenTreeStockItemTestResult extends InvenTreeModel {
       "notes": {},
       "attachment": {},
     };
-
-    if (InvenTreeAPI().supportsModernTestResults) {
-      fields.remove("test");
-    } else {
-      fields.remove("template");
-    }
 
     return fields;
   }
@@ -153,25 +146,32 @@ class InvenTreeStockItem extends InvenTreeModel {
   }
 
   // Return a set of fields to transfer this stock item via dialog
-  Map<String, dynamic> transferFields() {
+  Future<Map<String, dynamic>> transferFields() async {
+    // Read the server-side global default for merge-on-transfer
+    final bool mergeDefault = await InvenTreeAPI().getGlobalBooleanSetting(
+      "STOCK_MERGE_ON_TRANSFER",
+    );
+
     Map<String, dynamic> fields = {
       "pk": {"parent": "items", "nested": true, "hidden": true, "value": pk},
       "quantity": {"parent": "items", "nested": true, "value": quantity},
       "location": {"value": locationId},
       "status": {"parent": "items", "nested": true, "value": status},
       "packaging": {"parent": "items", "nested": true, "value": packaging},
+      "merge": {
+        "parent": "items",
+        "nested": true,
+        "type": "boolean",
+        "label": L10().mergeStockOnTransfer,
+        "help_text": L10().mergeStockOnTransferDetail,
+        "value": mergeDefault,
+      },
       "notes": {},
     };
 
     if (isSerialized()) {
       // Prevent editing of 'quantity' field if the item is serialized
       fields["quantity"]?["hidden"] = true;
-    }
-
-    // Old API does not support these fields
-    if (!api.supportsStockAdjustExtraFields) {
-      fields.remove("packaging");
-      fields.remove("status");
     }
 
     return fields;
@@ -302,6 +302,11 @@ class InvenTreeStockItem extends InvenTreeModel {
   DateTime? get expiryDate => getDate("expiry_date");
 
   String get expiryDateString => getDateString("expiry_date");
+
+  // Creation date
+  DateTime? get creationDate => getDate("creation_date");
+
+  String get creationDateString => getDateString("creation_date");
 
   // Date of last update
   DateTime? get updatedDate => getDate("updated");

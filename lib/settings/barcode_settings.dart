@@ -1,9 +1,11 @@
+import "dart:io";
+
 import "package:flutter/material.dart";
 import "package:flutter_tabler_icons/flutter_tabler_icons.dart";
 
+import "package:inventree/app_colors.dart";
 import "package:inventree/l10.dart";
 import "package:inventree/preferences.dart";
-import "package:inventree/app_colors.dart";
 
 import "package:inventree/widget/dialogs.dart";
 
@@ -68,7 +70,7 @@ class _InvenTreeBarcodeSettingsState
           ),
           actions: <Widget>[
             MaterialButton(
-              color: Colors.red,
+              color: COLOR_DANGER,
               textColor: Colors.white,
               child: Text(L10().cancel),
               onPressed: () {
@@ -78,7 +80,7 @@ class _InvenTreeBarcodeSettingsState
               },
             ),
             MaterialButton(
-              color: Colors.green,
+              color: COLOR_SUCCESS,
               textColor: Colors.white,
               child: Text(L10().ok),
               onPressed: () async {
@@ -112,6 +114,8 @@ class _InvenTreeBarcodeSettingsState
     Widget? barcodeInputIcon;
 
     switch (barcodeScanType) {
+      case BARCODE_CONTROLLER_INTENT:
+        barcodeInputIcon = Icon(TablerIcons.arrow_badge_right);
       case BARCODE_CONTROLLER_WEDGE:
         barcodeInputIcon = Icon(Icons.barcode_reader);
       case BARCODE_CONTROLLER_CAMERA:
@@ -120,10 +124,7 @@ class _InvenTreeBarcodeSettingsState
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(L10().barcodeSettings),
-        backgroundColor: COLOR_APP_BAR,
-      ),
+      appBar: AppBar(title: Text(L10().barcodeSettings)),
       body: Container(
         child: ListView(
           children: [
@@ -146,6 +147,12 @@ class _InvenTreeBarcodeSettingsState
                       subtitle: Text(L10().scannerExternalDetail),
                       leading: Icon(Icons.barcode_reader),
                     ),
+                    if (Platform.isAndroid)
+                      ListTile(
+                        title: Text(L10().scannerIntent),
+                        subtitle: Text(L10().scannerIntentDetail),
+                        leading: Icon(TablerIcons.arrow_badge_right),
+                      ),
                   ],
                   onSelected: (idx) async {
                     barcodeScanType = idx as int;

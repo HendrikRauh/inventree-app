@@ -20,7 +20,7 @@ import "package:inventree/l10.dart";
 import "package:inventree/app_colors.dart";
 import "package:inventree/widget/attachment_widget.dart";
 import "package:inventree/widget/dialogs.dart";
-import "package:inventree/widget/notes_widget.dart";
+import "package:inventree/widget/notes_list_widget.dart";
 import "package:inventree/widget/snacks.dart";
 import "package:inventree/widget/progress.dart";
 
@@ -127,7 +127,7 @@ class _SalesOrderDetailState extends RefreshableState<SalesOrderDetailWidget> {
       L10().issueOrder,
       L10().issueOrderConfirm,
       icon: TablerIcons.send,
-      color: Colors.blue,
+      color: COLOR_ACTION,
       acceptText: L10().issue,
       onAccept: () async {
         widget.order.issueOrder().then((dynamic) {
@@ -143,7 +143,7 @@ class _SalesOrderDetailState extends RefreshableState<SalesOrderDetailWidget> {
       L10().cancelOrder,
       L10().cancelOrderConfirm,
       icon: TablerIcons.circle_x,
-      color: Colors.red,
+      color: COLOR_DANGER,
       acceptText: L10().cancel,
       onAccept: () async {
         await widget.order.cancelOrder().then((dynamic) {
@@ -160,7 +160,7 @@ class _SalesOrderDetailState extends RefreshableState<SalesOrderDetailWidget> {
     if (showCameraShortcut && widget.order.canEdit) {
       actions.add(
         SpeedDialChild(
-          child: Icon(TablerIcons.camera, color: Colors.blue),
+          child: Icon(TablerIcons.camera, color: COLOR_ACTION),
           label: L10().takePicture,
           onTap: () async {
             _uploadImage(context);
@@ -172,7 +172,7 @@ class _SalesOrderDetailState extends RefreshableState<SalesOrderDetailWidget> {
     if (widget.order.isPending) {
       actions.add(
         SpeedDialChild(
-          child: Icon(TablerIcons.send, color: Colors.blue),
+          child: Icon(TablerIcons.send, color: COLOR_ACTION),
           label: L10().issueOrder,
           onTap: () async {
             _issueOrder(context);
@@ -184,7 +184,7 @@ class _SalesOrderDetailState extends RefreshableState<SalesOrderDetailWidget> {
     if (widget.order.isOpen) {
       actions.add(
         SpeedDialChild(
-          child: Icon(TablerIcons.circle_x, color: Colors.red),
+          child: Icon(TablerIcons.circle_x, color: COLOR_DANGER),
           label: L10().cancelOrder,
           onTap: () async {
             _cancelOrder(context);
@@ -198,7 +198,7 @@ class _SalesOrderDetailState extends RefreshableState<SalesOrderDetailWidget> {
         InvenTreeSOLineItem().canCreate) {
       actions.add(
         SpeedDialChild(
-          child: Icon(TablerIcons.circle_plus, color: Colors.green),
+          child: Icon(TablerIcons.circle_plus, color: COLOR_SUCCESS),
           label: L10().lineItemAdd,
           onTap: () async {
             _addLineItem(context);
@@ -208,7 +208,7 @@ class _SalesOrderDetailState extends RefreshableState<SalesOrderDetailWidget> {
 
       actions.add(
         SpeedDialChild(
-          child: Icon(TablerIcons.circle_plus, color: Colors.green),
+          child: Icon(TablerIcons.circle_plus, color: COLOR_SUCCESS),
           label: L10().shipmentAdd,
           onTap: () async {
             _addShipment(context);
@@ -239,20 +239,18 @@ class _SalesOrderDetailState extends RefreshableState<SalesOrderDetailWidget> {
         ),
       );
 
-      if (api.supportsBarcodeSOAllocateEndpoint) {
-        actions.add(
-          SpeedDialChild(
-            child: Icon(TablerIcons.transition_right),
-            label: L10().allocateStock,
-            onTap: () async {
-              scanBarcode(
-                context,
-                handler: SOAllocateStockHandler(salesOrder: widget.order),
-              );
-            },
-          ),
-        );
-      }
+      actions.add(
+        SpeedDialChild(
+          child: Icon(TablerIcons.transition_right),
+          label: L10().allocateStock,
+          onTap: () async {
+            scanBarcode(
+              context,
+              handler: SOAllocateStockHandler(salesOrder: widget.order),
+            );
+          },
+        ),
+      );
     }
 
     return actions;
@@ -263,12 +261,10 @@ class _SalesOrderDetailState extends RefreshableState<SalesOrderDetailWidget> {
     await widget.order.reload();
     await api.SalesOrderStatus.load();
 
-    supportsProjectCodes =
-        api.supportsProjectCodes &&
-        await api.getGlobalBooleanSetting(
-          "PROJECT_CODES_ENABLED",
-          backup: true,
-        );
+    supportsProjectCodes = await api.getGlobalBooleanSetting(
+      "PROJECT_CODES_ENABLED",
+      backup: true,
+    );
     showCameraShortcut = await InvenTreeSettingsManager().getBool(
       INV_SO_SHOW_CAMERA,
       true,
@@ -312,11 +308,6 @@ class _SalesOrderDetailState extends RefreshableState<SalesOrderDetailWidget> {
 
     fields.remove("customer");
 
-    // Contact model not supported by server
-    if (!api.supportsContactModel) {
-      fields.remove("contact");
-    }
-
     // ProjectCode model not supported by server
     if (!supportsProjectCodes) {
       fields.remove("project_code");
@@ -352,6 +343,10 @@ class _SalesOrderDetailState extends RefreshableState<SalesOrderDetailWidget> {
 
   List<Widget> orderTiles(BuildContext context) {
     List<Widget> tiles = [headerTile(context)];
+
+    if (showPk) {
+      tiles.add(pkTile(widget.order.pk));
+    }
 
     InvenTreeCompany? customer = widget.order.customer;
 
@@ -497,17 +492,7 @@ class _SalesOrderDetailState extends RefreshableState<SalesOrderDetailWidget> {
 
     // Notes tile
     tiles.add(
-      ListTile(
-        title: Text(L10().notes),
-        leading: Icon(TablerIcons.note, color: COLOR_ACTION),
-        trailing: LinkIcon(),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => NotesWidget(widget.order)),
-          );
-        },
-      ),
+      ShowNotesItem(context, widget.order, InvenTreeSalesOrder.MODEL_TYPE),
     );
 
     ListTile? parameterTile = ShowParametersItem(

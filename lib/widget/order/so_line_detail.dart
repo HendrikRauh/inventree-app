@@ -111,7 +111,7 @@ class _SOLineDetailWidgetState extends RefreshableState<SoLineDetailWidget> {
     if (order != null && order!.isOpen) {
       buttons.add(
         SpeedDialChild(
-          child: Icon(TablerIcons.transition_right, color: Colors.blue),
+          child: Icon(TablerIcons.transition_right, color: COLOR_ACTION),
           label: L10().allocateStock,
           onTap: () async {
             _allocateStock(context);
@@ -128,23 +128,21 @@ class _SOLineDetailWidgetState extends RefreshableState<SoLineDetailWidget> {
     List<SpeedDialChild> actions = [];
 
     if (order != null && order!.isOpen && InvenTreeSOLineItem().canCreate) {
-      if (api.supportsBarcodeSOAllocateEndpoint) {
-        actions.add(
-          SpeedDialChild(
-            child: Icon(TablerIcons.transition_right),
-            label: L10().allocateStock,
-            onTap: () async {
-              scanBarcode(
-                context,
-                handler: SOAllocateStockHandler(
-                  salesOrder: order,
-                  lineItem: widget.item,
-                ),
-              );
-            },
-          ),
-        );
-      }
+      actions.add(
+        SpeedDialChild(
+          child: Icon(TablerIcons.transition_right),
+          label: L10().allocateStock,
+          onTap: () async {
+            scanBarcode(
+              context,
+              handler: SOAllocateStockHandler(
+                salesOrder: order,
+                lineItem: widget.item,
+              ),
+            );
+          },
+        ),
+      );
     }
 
     return actions;
@@ -166,6 +164,10 @@ class _SOLineDetailWidgetState extends RefreshableState<SoLineDetailWidget> {
   @override
   List<Widget> getTiles(BuildContext context) {
     List<Widget> tiles = [];
+
+    if (showPk) {
+      tiles.add(pkTile(widget.item.pk));
+    }
 
     // Reference to the part
     tiles.add(

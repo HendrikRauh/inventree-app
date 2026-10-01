@@ -15,8 +15,10 @@ const String INV_HOME_SHOW_BUILD = "homeShowBuild";
 const String INV_HOME_SHOW_MANUFACTURERS = "homeShowManufacturers";
 const String INV_HOME_SHOW_CUSTOMERS = "homeShowCustomers";
 const String INV_HOME_SHOW_SUPPLIERS = "homeShowSuppliers";
+const String INV_HOME_SHOW_TRANSFER = "homeShowTransfer";
 
 const String INV_SCREEN_ORIENTATION = "appScreenOrientation";
+const String INV_SHOW_PK = "showPk";
 
 // Available screen orientation values
 const int SCREEN_ORIENTATION_SYSTEM = 0;
@@ -62,6 +64,10 @@ const String INV_BARCODE_SCAN_SINGLE = "barcodeScanSingle";
 // Barcode scanner types
 const int BARCODE_CONTROLLER_CAMERA = 0;
 const int BARCODE_CONTROLLER_WEDGE = 1;
+const int BARCODE_CONTROLLER_INTENT = 2;
+
+// Whether one-time intent wedge detection has run
+const String INV_BARCODE_WEDGE_DETECTED = "barcodeWedgeDetected";
 
 /*
  * Class for storing InvenTree preferences in a NoSql DB

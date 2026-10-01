@@ -1,3 +1,47 @@
+## xx.yy.z - Month Year
+---
+
+- Supports new multi-note API for model instances
+- Implement rendering for HTML note content
+
+
+## 0.25.2 - September 2026
+---
+
+- On stock transfer, add a merge option.
+- For merge option, check default value from server.
+- Bug fix for top level stock display
+- Bug fix for top level location display
+
+## 0.25.1 - August 2026
+---
+
+- Additional filtering options for supplier parts
+- Additional barcode support using data intents
+- Improvements for build order display
+
+## 0.25.0 - July 2026
+---
+
+- API speed improvements
+- Enable scanning of Build Order barcodes
+- Updated translations
+
+## 0.24.3 - May 2026
+---
+
+- Update file and image selection packages
+- Check for app updates 
+- Updated translations
+
+## 0.24.2 - May 2026
+---
+
+- Display user information in the app drawer
+- Support "creation_date" field for stock items
+- Moves notifications to the top of the screen
+- Updated translations
+
 ## 0.24.1 - April 2026
 ---
 

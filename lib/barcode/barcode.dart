@@ -3,17 +3,22 @@ import "package:flutter/material.dart";
 import "package:flutter_speed_dial/flutter_speed_dial.dart";
 import "package:flutter_tabler_icons/flutter_tabler_icons.dart";
 import "package:inventree/helpers.dart";
+import "package:inventree/inventree/build.dart";
 import "package:inventree/inventree/sales_order.dart";
 import "package:inventree/inventree/sentry.dart";
+import "package:inventree/inventree/transfer_order.dart";
 import "package:inventree/preferences.dart";
+import "package:inventree/widget/build/build_detail.dart";
 import "package:inventree/widget/company/manufacturer_part_detail.dart";
 import "package:inventree/widget/order/sales_order_detail.dart";
+import "package:inventree/widget/order/transfer_order_detail.dart";
 import "package:one_context/one_context.dart";
 
 import "package:inventree/api.dart";
 import "package:inventree/l10.dart";
 
 import "package:inventree/barcode/camera_controller.dart";
+import "package:inventree/barcode/intent_controller.dart";
 import "package:inventree/barcode/wedge_controller.dart";
 import "package:inventree/barcode/controller.dart";
 import "package:inventree/barcode/handler.dart";
@@ -64,6 +69,53 @@ Future<void> barcodeFailure(String msg, dynamic extra) async {
   );
 }
 
+void initGlobalIntentListener() {
+  bool _processing = false;
+
+  datawedgeStream.listen((event) async {
+    if (intentScannerActive) return;
+    if (_processing) return;
+
+    _processing = true;
+
+    try {
+      final int controllerType =
+          await InvenTreeSettingsManager().getValue(
+                INV_BARCODE_SCAN_TYPE,
+                BARCODE_CONTROLLER_CAMERA,
+              )
+              as int;
+      if (controllerType != BARCODE_CONTROLLER_INTENT) return;
+
+      if (!InvenTreeAPI().isConnected()) return;
+
+      String barcode = "";
+      if (event is Map) {
+        final map = Map<String, dynamic>.from(event);
+        barcode = (map["data"] ?? "").toString();
+      } else if (event is String) {
+        barcode = event;
+      }
+
+      if (barcode.isEmpty) return;
+
+      if (!OneContext.hasContext) return;
+
+      await OneContext().navigator.push(
+        PageRouteBuilder(
+          pageBuilder: (context, _, _) => IntentBarcodeController(
+            BarcodeScanHandler(),
+            initialBarcode: barcode,
+          ),
+          opaque: false,
+        ),
+      );
+    } finally {
+      _processing = false;
+    }
+  });
+}
+
 /*
  * Launch a barcode scanner with a particular context and handler.
  * 
@@ -89,6 +141,8 @@ Future<Object?> scanBarcode(
           as int;
 
   switch (barcodeControllerType) {
+    case BARCODE_CONTROLLER_INTENT:
+      controller = IntentBarcodeController(handler);
     case BARCODE_CONTROLLER_WEDGE:
       controller = WedgeBarcodeController(handler);
     case BARCODE_CONTROLLER_CAMERA:
@@ -215,6 +269,37 @@ class BarcodeScanHandler extends BarcodeHandler {
   }
 
   /*
+   * Response when a "BuildOrder" instance is scanned
+   */
+  Future<void> handleBuildOrder(int pk) async {
+    var order = await InvenTreeBuildOrder().get(pk);
+
+    if (order is InvenTreeBuildOrder) {
+      OneContext().pop();
+      OneContext().push(
+        MaterialPageRoute(builder: (context) => BuildOrderDetailWidget(order)),
+      );
+    }
+  }
+
+  /*
+    * Response when a "TransferOrder" instance is scanned
+  */
+  Future<void> handleTransferOrder(int pk) async {
+    var order = await InvenTreeTransferOrder().get(pk);
+
+    if (order is InvenTreeTransferOrder &&
+        InvenTreeAPI().supportsTransferOrders) {
+      OneContext().pop();
+      OneContext().push(
+        MaterialPageRoute(
+          builder: (context) => TransferOrderDetailWidget(order),
+        ),
+      );
+    }
+  }
+
+  /*
    * Response when a "PurchaseOrder" instance is scanned
    */
   Future<void> handlePurchaseOrder(int pk) async {
@@ -256,12 +341,11 @@ class BarcodeScanHandler extends BarcodeHandler {
       InvenTreePart.MODEL_TYPE,
       InvenTreeStockLocation.MODEL_TYPE,
       InvenTreeCompany.MODEL_TYPE,
+      InvenTreeBuildOrder.MODEL_TYPE,
+      InvenTreeTransferOrder.MODEL_TYPE,
+      InvenTreePurchaseOrder.MODEL_TYPE,
+      InvenTreeSalesOrder.MODEL_TYPE,
     ];
-
-    if (InvenTreeAPI().supportsOrderBarcodes) {
-      validModels.add(InvenTreePurchaseOrder.MODEL_TYPE);
-      validModels.add(InvenTreeSalesOrder.MODEL_TYPE);
-    }
 
     for (var key in validModels) {
       if (data.containsKey(key)) {
@@ -286,6 +370,12 @@ class BarcodeScanHandler extends BarcodeHandler {
       switch (model) {
         case InvenTreeStockItem.MODEL_TYPE:
           await handleStockItem(pk);
+          return;
+        case InvenTreeBuildOrder.MODEL_TYPE:
+          await handleBuildOrder(pk);
+          return;
+        case InvenTreeTransferOrder.MODEL_TYPE:
+          await handleTransferOrder(pk);
           return;
         case InvenTreePurchaseOrder.MODEL_TYPE:
           await handlePurchaseOrder(pk);

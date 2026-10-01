@@ -3,6 +3,7 @@ import "package:flutter_tabler_icons/flutter_tabler_icons.dart";
 import "package:inventree/widget/progress.dart";
 
 import "package:inventree/api.dart";
+import "package:inventree/app_colors.dart";
 import "package:inventree/l10.dart";
 import "package:inventree/inventree/build.dart";
 
@@ -60,15 +61,17 @@ class BuildOrderListItem extends StatelessWidget {
                       vertical: 4.0,
                     ),
                     decoration: BoxDecoration(
-                      color: BuildOrderStatus.getStatusColor(
-                        order.status,
-                      ).withValues(alpha: 0.2),
+                      color: InvenTreeAPI().BuildOrderStatus
+                          .color(order.status)
+                          .withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12.0),
                     ),
                     child: Text(
-                      BuildOrderStatus.getStatusText(order.status),
+                      InvenTreeAPI().BuildOrderStatus.label(order.status),
                       style: TextStyle(
-                        color: BuildOrderStatus.getStatusColor(order.status),
+                        color: InvenTreeAPI().BuildOrderStatus.color(
+                          order.status,
+                        ),
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
                       ),
@@ -149,7 +152,7 @@ class BuildOrderListItem extends StatelessWidget {
                                   DateTime.tryParse(
                                     order.targetDate,
                                   )!.isBefore(DateTime.now()))
-                              ? Colors.red
+                              ? COLOR_DANGER
                               : null,
                         ),
                       ),

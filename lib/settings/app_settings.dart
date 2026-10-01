@@ -35,6 +35,7 @@ class _InvenTreeAppSettingsState extends State<InvenTreeAppSettingsWidget> {
   bool strictHttps = false;
   bool enableLabelPrinting = true;
   bool darkMode = false;
+  bool showPk = false;
 
   int screenOrientation = SCREEN_ORIENTATION_SYSTEM;
 
@@ -74,6 +75,8 @@ class _InvenTreeAppSettingsState extends State<InvenTreeAppSettingsWidget> {
               true,
             )
             as bool;
+    showPk =
+        await InvenTreeSettingsManager().getValue(INV_SHOW_PK, false) as bool;
 
     darkMode = AdaptiveTheme.of(context).mode.isDark;
 
@@ -163,10 +166,7 @@ class _InvenTreeAppSettingsState extends State<InvenTreeAppSettingsWidget> {
 
     return Scaffold(
       key: _settingsKey,
-      appBar: AppBar(
-        title: Text(L10().appSettings),
-        backgroundColor: COLOR_APP_BAR,
-      ),
+      appBar: AppBar(title: Text(L10().appSettings)),
       body: Container(
         child: ListView(
           children: [
@@ -193,6 +193,20 @@ class _InvenTreeAppSettingsState extends State<InvenTreeAppSettingsWidget> {
                   }
                   setState(() {
                     darkMode = value;
+                  });
+                },
+              ),
+            ),
+            ListTile(
+              title: Text(L10().showPkValue),
+              subtitle: Text(L10().showPkValueDetail),
+              leading: Icon(TablerIcons.hash),
+              trailing: Switch(
+                value: showPk,
+                onChanged: (bool value) {
+                  InvenTreeSettingsManager().setValue(INV_SHOW_PK, value);
+                  setState(() {
+                    showPk = value;
                   });
                 },
               ),
@@ -274,6 +288,7 @@ class _InvenTreeAppSettingsState extends State<InvenTreeAppSettingsWidget> {
                 value: strictHttps,
                 onChanged: (bool value) {
                   InvenTreeSettingsManager().setValue(INV_STRICT_HTTPS, value);
+                  InvenTreeAPI().onStrictHttpsChanged(value);
                   setState(() {
                     strictHttps = value;
                   });

@@ -62,14 +62,6 @@ class InvenTreeSalesOrder extends InvenTreeOrder {
       },
     };
 
-    if (!InvenTreeAPI().supportsProjectCodes) {
-      fields.remove("project_code");
-    }
-
-    if (!InvenTreeAPI().supportsContactModel) {
-      fields.remove("contact");
-    }
-
     if (!InvenTreeAPI().supportsStartDate) {
       fields.remove("start_date");
     }

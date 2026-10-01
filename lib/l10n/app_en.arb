@@ -342,6 +342,12 @@
   "configureServer": "Configure server settings",
   "@configureServer": {},
 
+  "consume": "Consume",
+  "@consume": {},
+
+  "consumeDetail": "Allocated stock will be consumed, not transferred",
+  "@consumeDetail": {},
+
   "confirmScan": "Confirm Transfer",
   "@confirmScan": {},
 
@@ -351,8 +357,14 @@
   "connectionCheck": "Check Connection",
   "@connectionCheck": {},
 
+  "connectionCheckDetail": "Checks that the server address is reachable. This does not verify your username or password.",
+  "@connectionCheckDetail": {},
+
   "connectionRefused": "Connection Refused",
   "@connectionRefused": {},
+
+  "connectionRefusedDetail": "Could not reach the server. Check that the address is correct and the server is running.",
+  "@connectionRefusedDetail": {},
 
   "count": "Count",
   "@count": {
@@ -375,6 +387,12 @@
 
   "cropImage": "Crop Image",
   "@cropImage": {},
+
+  "cropImagePrompt": "Do you want to crop this image before uploading?",
+  "@cropImagePrompt": {},
+
+  "useOriginal": "Use Original",
+  "@useOriginal": {},
 
   "customer": "Customer",
   "@customer": {},
@@ -399,6 +417,15 @@
 
   "darkModeEnable": "Enable dark mode",
   "@darkModeEnable": {},
+
+  "showPkValue": "Show ID",
+  "@showPkValue": {},
+
+  "showPkValueDetail": "Display the internal ID (PK) value for parts, stock items and other objects",
+  "@showPkValueDetail": {},
+
+  "pk": "ID",
+  "@pk": {},
 
   "delete": "Delete",
   "@delete": {},
@@ -588,6 +615,12 @@
   "filterInProductionDetail": "Show parts in production",
   "@filterInProductionDetail": {},
 
+  "filterPrimary": "Primary",
+  "@filterPrimary": {},
+
+  "filterPrimaryDetail": "Show primary supplier parts",
+  "@filterPrimaryDetail": {},
+
   "filterSerialized": "Serialized",
   "@filterSerialized": {},
 
@@ -688,6 +721,12 @@
 
   "homeShowCustomersDescription": "Show customers button on home screen",
   "@homeShowCustomersDescription": {},
+
+  "homeShowTransfer": "Show Transfer Orders",
+  "@homeShowTransfer": {},
+
+  "homeShowTransferDescription": "Show transfer order button on home screen",
+  "@homeShowTransferDescription": {},
 
   "imageUploadFailure": "Image upload failed",
   "@imageUploadFailure": {},
@@ -923,6 +962,9 @@
     "description": "Notes"
   },
 
+  "noNotesFound": "No notes found",
+  "@noNotesFound": {},
+
   "notifications": "Notifications",
   "@notifications": {},
 
@@ -1091,6 +1133,15 @@
   "pending": "Pending",
   "@pending": {},
 
+  "issued": "Issued",
+  "@issued": {},
+
+  "cancelled": "Cancelled",
+  "@cancelled": {},
+
+  "onHold": "On Hold",
+  "@onHold": {},
+
   "permissionAccountDenied": "Your account does not have the required permissions to perform this action",
   "@permissionAccountDenied": {},
 
@@ -1102,6 +1153,9 @@
 
   "printLabel": "Print Label",
   "@printLabel": {},
+
+  "primary": "Primary",
+  "@primary": {},
 
   "plugin": "Plugin",
   "@plugin": {},
@@ -1129,6 +1183,9 @@
 
   "profileConnect": "Connect to Server",
   "@profileConnect": {},
+
+  "profileSwitchConfirm": "This will disconnect your current session. Switch server profile?",
+  "@profileSwitchConfirm": {},
 
   "profileEdit": "Edit Server Profile",
   "@profileEdit": {},
@@ -1404,6 +1461,12 @@
   "scannerExternalDetail": "Use external scanner to read barcodes (wedge mode)",
   "@scannerExternalDetail": {},
 
+  "scannerIntent": "Intent Wedge",
+  "@scannerIntent": {},
+
+  "scannerIntentDetail": "Receive scans via Android intents",
+  "@scannerIntentDetail": {},
+
   "scanReceivedParts": "Scan Received Parts",
   "@scanReceivedParts": {},
 
@@ -1472,11 +1535,20 @@
   "serverAuthenticationError": "Authentication Error",
   "@serverAuthenticationError": {},
 
+  "sessionExpired": "Session Expired",
+  "@sessionExpired": {},
+
+  "sessionExpiredDetail": "Your session has expired. Please sign in again.",
+  "@sessionExpiredDetail": {},
+
   "serverCertificateError": "Cerficate Error",
   "@serverCertificateError": {},
 
   "serverCertificateInvalid": "Server HTTPS certificate is invalid",
   "@serverCertificateInvalid": {},
+
+  "serverCertificateTrust": "This server's certificate could not be verified. Trust it anyway?",
+  "@serverCertificateTrust": {},
 
   "serverConnected": "Connected to Server",
   "@serverConnected": {},
@@ -1799,6 +1871,21 @@
     "description": "transfer"
   },
 
+  "transferOrder": "Transfer Order",
+  "@transferOrder": {},
+
+  "transferOrders": "Transfer Orders",
+  "@transferOrders": {},
+
+  "transferOrderCreate": "New Transfer Order",
+  "@transferOrderCreate": {},
+
+  "transferOrderEdit": "Edit Transfer Order",
+  "@transferOrderEdit": {},
+
+  "transferOrderUpdated": "Transfer order updated",
+  "@transferOrderUpdated": {},
+
   "transferStock": "Transfer Stock",
   "@transferStock": {
     "description": "transfer stock"
@@ -1812,6 +1899,12 @@
 
   "transferStockLocationDetail": "Transfer this stock location into another",
   "@transferStockLocationDetail": {},
+
+  "mergeStockOnTransfer": "Merge stock on transfer",
+  "@mergeStockOnTransfer": {},
+
+  "mergeStockOnTransferDetail": "Merge transferred stock into existing stock at destination if possible",
+  "@mergeStockOnTransferDetail": {},
 
   "translate": "Translate",
   "@translate": {},
@@ -1839,6 +1932,9 @@
 
   "units": "Units",
   "@units": {},
+
+  "unknown": "Unknown",
+  "@unknown": {},
 
   "unknownResponse": "Unknown Response",
   "@unknownResponse": {},
@@ -1870,6 +1966,9 @@
   "usernameEmpty": "Username cannot be empty",
   "@usernameEmpty": {},
 
+  "userDetails": "User Details",
+  "@userDetails": {},
+
   "value": "Value",
   "@value": {
     "description": "value"
@@ -1886,6 +1985,9 @@
 
   "version": "Version",
   "@version": {},
+
+  "versionNewer": "New version available",
+  "@versionNewer": {},
 
   "viewDetails": "View Details",
   "@viewDetails": {},

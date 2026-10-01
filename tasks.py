@@ -18,7 +18,7 @@ def clean(c):
 @task
 def update(c):
     """Update flutter dependencies."""
-    c.run("flutter pub get")
+    c.run("fvm flutter pub get")
 
 @task
 def translate(c):
@@ -29,7 +29,7 @@ def translate(c):
     l10_dir = os.path.abspath(l10_dir)
 
     python = "python3" if sys.platform.lower() == "darwin" else "python"
-    c.run(f"cd {l10_dir} && {python} collect_translations.py")
+    c.run(f'cd "{l10_dir}" && {python} collect_translations.py')
 
 
 @task(pre=[clean, update, translate])

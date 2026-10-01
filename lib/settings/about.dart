@@ -1,5 +1,6 @@
 import "package:inventree/api.dart";
 import "package:inventree/app_colors.dart";
+import "package:inventree/inventree/update_check.dart";
 import "package:inventree/settings/release.dart";
 
 import "package:flutter/material.dart";
@@ -93,19 +94,7 @@ class InvenTreeAboutWidget extends StatelessWidget {
                 : L10().notConnected,
           ),
           leading: Icon(TablerIcons.globe),
-          trailing: InvenTreeAPI().isConnected()
-              ? Icon(TablerIcons.circle_check, color: COLOR_SUCCESS)
-              : Icon(TablerIcons.circle_x, color: COLOR_DANGER),
-        ),
-      );
-
-      tiles.add(
-        ListTile(
-          title: Text(L10().username),
-          subtitle: Text(InvenTreeAPI().username),
-          leading: InvenTreeAPI().username.isNotEmpty
-              ? Icon(TablerIcons.user)
-              : Icon(TablerIcons.user_cancel, color: COLOR_DANGER),
+          trailing: Icon(TablerIcons.circle_check, color: COLOR_SUCCESS),
         ),
       );
 
@@ -141,6 +130,51 @@ class InvenTreeAboutWidget extends StatelessWidget {
           leading: Icon(TablerIcons.plug),
         ),
       );
+
+      tiles.add(
+        ListTile(
+          title: Text(
+            L10().userDetails,
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+      );
+
+      tiles.add(
+        ListTile(
+          title: Text(L10().username),
+          subtitle: Text(InvenTreeAPI().username),
+          leading: InvenTreeAPI().username.isNotEmpty
+              ? Icon(TablerIcons.user)
+              : Icon(TablerIcons.user_cancel, color: COLOR_DANGER),
+        ),
+      );
+
+      final String email = InvenTreeAPI().userEmail;
+
+      if (email.isNotEmpty) {
+        tiles.add(
+          ListTile(
+            title: Text(L10().email),
+            subtitle: Text(email),
+            leading: Icon(TablerIcons.at),
+          ),
+        );
+      }
+
+      final String firstName = InvenTreeAPI().userFirstName;
+      final String lastName = InvenTreeAPI().userLastName;
+      final String fullName = "$firstName $lastName".trim();
+
+      if (fullName.isNotEmpty) {
+        tiles.add(
+          ListTile(
+            title: Text(L10().name),
+            subtitle: Text(fullName),
+            leading: Icon(TablerIcons.id_badge),
+          ),
+        );
+      }
     } else {
       tiles.add(
         ListTile(
@@ -176,8 +210,23 @@ class InvenTreeAboutWidget extends StatelessWidget {
         title: Text(L10().version),
         subtitle: Text("${info.version} - Build ${info.buildNumber}"),
         leading: Icon(TablerIcons.info_circle),
+        trailing: UpdateChecker().newVersionAvailable
+            ? Icon(TablerIcons.alert_circle, color: COLOR_WARNING)
+            : Icon(TablerIcons.circle_check, color: COLOR_SUCCESS),
       ),
     );
+
+    UpdateChecker().checkForUpdate();
+
+    if (!UpdateChecker().newVersionAvailable) {
+      tiles.add(
+        ListTile(
+          title: Text(L10().versionNewer),
+          leading: Icon(TablerIcons.alert_circle, color: COLOR_WARNING),
+          trailing: LargeText(UpdateChecker().latestVersion),
+        ),
+      );
+    }
 
     tiles.add(
       ListTile(
@@ -240,10 +289,7 @@ class InvenTreeAboutWidget extends StatelessWidget {
     );
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(L10().appAbout),
-        backgroundColor: COLOR_APP_BAR,
-      ),
+      appBar: AppBar(title: Text(L10().appAbout)),
       body: ListView(
         children: ListTile.divideTiles(context: context, tiles: tiles).toList(),
       ),

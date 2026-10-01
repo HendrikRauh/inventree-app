@@ -10,6 +10,7 @@ import "package:inventree/l10.dart";
 import "package:inventree/helpers.dart";
 
 import "package:inventree/inventree/bom.dart";
+import "package:inventree/inventree/company.dart";
 import "package:inventree/inventree/part.dart";
 import "package:inventree/inventree/stock.dart";
 import "package:inventree/labels.dart";
@@ -20,7 +21,7 @@ import "package:inventree/widget/link_icon.dart";
 import "package:inventree/widget/parameter_widget.dart";
 import "package:inventree/widget/part/bom_list.dart";
 import "package:inventree/widget/part/part_list.dart";
-import "package:inventree/widget/notes_widget.dart";
+import "package:inventree/widget/notes_list_widget.dart";
 import "package:inventree/widget/part/part_pricing.dart";
 import "package:inventree/widget/progress.dart";
 import "package:inventree/widget/part/category_display.dart";
@@ -61,6 +62,7 @@ class _PartDisplayState extends RefreshableState<PartDetailWidget> {
   int bomCount = 0;
   int usedInCount = 0;
   int variantCount = 0;
+  int supplierPartCount = 0;
 
   InvenTreePartPricing? partPricing;
   InvenTreePartRequirements? partRequirements;
@@ -307,6 +309,19 @@ class _PartDisplayState extends RefreshableState<PartDetailWidget> {
         });
       }
     });
+
+    // Request the number of supplier parts
+    if (part.isPurchaseable) {
+      InvenTreeSupplierPart().count(filters: {"part": part.pk.toString()}).then(
+        (int value) {
+          if (mounted) {
+            setState(() {
+              supplierPartCount = value;
+            });
+          }
+        },
+      );
+    }
   }
 
   void _editPartDialog(BuildContext context) {
@@ -353,6 +368,10 @@ class _PartDisplayState extends RefreshableState<PartDetailWidget> {
     if (loading) {
       tiles.add(progressIndicator());
       return tiles;
+    }
+
+    if (showPk) {
+      tiles.add(pkTile(part.pk));
     }
 
     if (!part.isActive) {
@@ -686,12 +705,12 @@ class _PartDisplayState extends RefreshableState<PartDetailWidget> {
     }
 
     if (part.isPurchaseable) {
-      if (part.supplierCount > 0) {
+      if (supplierPartCount > 0) {
         tiles.add(
           ListTile(
             title: Text(L10().suppliers),
             leading: Icon(TablerIcons.building_factory, color: COLOR_ACTION),
-            trailing: LinkIcon(text: "${part.supplierCount}"),
+            trailing: LinkIcon(text: "${supplierPartCount}"),
             onTap: () {
               Navigator.push(
                 context,
@@ -707,19 +726,7 @@ class _PartDisplayState extends RefreshableState<PartDetailWidget> {
     }
 
     // Notes field
-    tiles.add(
-      ListTile(
-        title: Text(L10().notes),
-        leading: Icon(TablerIcons.note, color: COLOR_ACTION),
-        trailing: LinkIcon(),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => NotesWidget(part)),
-          );
-        },
-      ),
-    );
+    tiles.add(ShowNotesItem(context, part, InvenTreePart.MODEL_TYPE));
 
     ListTile? parameterTile = ShowParametersItem(
       context,
